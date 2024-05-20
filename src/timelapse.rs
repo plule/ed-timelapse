@@ -103,12 +103,14 @@ fn store_screenshot(
         now.format("%Y-%m-%d"),
         screenshot.location,
     ));
+    let image = image::io::Reader::open(&screenshot.path)?.decode()?;
     std::fs::create_dir_all(&folder)?;
-    let filename = now.format("%H-%M-%S.bmp").to_string();
+    let filename = now.format("%H-%M-%S.jpg").to_string();
     let destination = folder.join(filename);
-    std::fs::copy(&screenshot.path, &destination)?;
+    image.save(&destination)?;
 
     if remove_original {
+        info!("Removing original screenshot: {:?}", screenshot.path);
         std::fs::remove_file(screenshot.path)?;
     }
 
