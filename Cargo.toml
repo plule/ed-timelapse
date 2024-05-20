@@ -23,6 +23,15 @@ env_logger = "0.11.3"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
+anyhow = "1.0.86"
+ed-journals = "0.2.0"
+windows = { version = "0.56.0", features = [
+    "Win32",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+] }
+directories = "5.0.1"
+chrono = "0.4.38"
 
 [profile.release]
 opt-level = 2 # fast and small wasm

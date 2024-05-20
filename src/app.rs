@@ -1,3 +1,9 @@
+use std::path::{Path, PathBuf};
+
+use anyhow::Result;
+
+use crate::screenshot::Screenshot;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -5,16 +11,33 @@ pub struct TemplateApp {
     // Example stuff:
     label: String,
 
+    #[serde(skip)]
+    last_error: Option<String>,
+
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
+
+    #[serde(skip)]
+    screenshoter: crate::screenshot::Watcher,
+
+    timelapse_folder: PathBuf,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
+        let timelapse_folder = directories::UserDirs::new()
+            .unwrap()
+            .picture_dir()
+            .unwrap()
+            .to_owned()
+            .join("Elite Dangerous Timelapses");
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
+            last_error: None,
             value: 2.7,
+            screenshoter: crate::screenshot::Watcher::try_new().unwrap(),
+            timelapse_folder,
         }
     }
 }
@@ -79,7 +102,18 @@ impl eframe::App for TemplateApp {
                 self.value += 1.0;
             }
 
+            if ui.button("Screenshot").clicked() {
+                // This is where you would call your own code to take a screenshot.
+                // Here we just print a message to the console:
+                let screenshot = self.screenshoter.take_screenshot(true).unwrap();
+                dbg!(store_screenshot(screenshot, true, &self.timelapse_folder).unwrap());
+            }
+
             ui.separator();
+
+            if let Some(error) = &self.last_error {
+                ui.colored_label(egui::Color32::RED, error);
+            }
 
             ui.add(egui::github_link_file!(
                 "https://github.com/emilk/eframe_template/blob/main/",
@@ -106,4 +140,25 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
+}
+
+fn store_screenshot(
+    screenshot: Screenshot,
+    remove_original: bool,
+    folder: &Path,
+) -> Result<PathBuf> {
+    let folder = folder.join(format!(
+        "{} {}",
+        chrono::Local::now().format("%Y-%m-%d"),
+        screenshot.location,
+    ));
+    std::fs::create_dir_all(&folder)?;
+    let destination = folder.join(screenshot.path.file_name().unwrap());
+    std::fs::copy(&screenshot.path, &destination)?;
+
+    if remove_original {
+        std::fs::remove_file(screenshot.path)?;
+    }
+
+    Ok(destination)
 }
