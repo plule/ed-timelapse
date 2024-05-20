@@ -23,7 +23,7 @@ pub fn watch_screenshots() -> Result<(Receiver<ScreenshotEvent>, Sender<Exit>)> 
     let journals = ed_journals::JournalDir::new(get_journal_dir()?)?;
     let reader = journals
         .journal_logs_newest_first()?
-        .get(0)
+        .first()
         .context("No journal files")?
         .create_live_reader()
         .context("Failed to read the journal file")?;

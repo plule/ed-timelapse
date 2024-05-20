@@ -74,7 +74,7 @@ impl TryFrom<ScreenshotEvent> for Screenshot {
         if !path.is_file() {
             bail!("Screenshot file does not exist");
         }
-        let location = value.body.unwrap_or_else(|| value.system);
+        let location = value.body.unwrap_or(value.system);
         Ok(Self { path, location })
     }
 }

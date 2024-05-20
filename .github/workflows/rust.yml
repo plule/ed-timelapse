@@ -77,21 +77,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: macos-latest
-          TARGET: aarch64-apple-darwin
-
-        - os: macos-latest
-          TARGET: x86_64-apple-darwin
-
-        - os: ubuntu-latest
-          TARGET: arm-unknown-linux-musleabihf
-
-        - os: ubuntu-latest
-          TARGET: armv7-unknown-linux-musleabihf
-
-        - os: ubuntu-latest
-          TARGET: x86_64-unknown-linux-musl
-
         - os: windows-latest
           TARGET: x86_64-pc-windows-msvc
           EXTENSION: .exe
@@ -114,20 +99,20 @@ jobs:
         args: --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
-      run: cp target/${{ matrix.TARGET }}/release/ed_timelapse${{ matrix.EXTENSION }} ed_timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      run: cp target/${{ matrix.TARGET }}/release/ed-timelapse${{ matrix.EXTENSION }} ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
     - uses: actions/upload-artifact@master
       with:
-        name: ed_timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        path: ed_timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        name: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        path: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
     - uses: svenstaro/upload-release-action@v2
       name: Upload binaries to release
       if: ${{ github.event_name == 'push' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ed_timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        asset_name: ed_timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        file: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        asset_name: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         tag: ${{ github.ref }}
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
         overwrite: true

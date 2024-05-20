@@ -68,7 +68,7 @@ pub fn request_screenshot(high_res: bool) -> Result<()> {
             &keys
                 .iter()
                 .rev()
-                .map(|k| keyscan_input(*k, KEYEVENTF_KEYUP.0 as u32))
+                .map(|k| keyscan_input(*k, KEYEVENTF_KEYUP.0))
                 .collect::<Vec<_>>(),
             size_of::<INPUT>() as i32,
         );
