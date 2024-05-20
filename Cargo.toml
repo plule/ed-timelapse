@@ -32,6 +32,7 @@ windows = { version = "0.56.0", features = [
 ] }
 directories = "5.0.1"
 chrono = "0.4.38"
+egui_logger = "0.4.4"
 
 [profile.release]
 opt-level = 2 # fast and small wasm

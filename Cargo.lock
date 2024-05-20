@@ -990,6 +990,7 @@ dependencies = [
  "ed-journals",
  "eframe",
  "egui",
+ "egui_logger",
  "env_logger",
  "log",
  "serde",
@@ -1078,6 +1079,18 @@ dependencies = [
  "memoffset 0.9.0",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "egui_logger"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fce85f958e55de0295af328a0f0aa102b2b449b723b76dfaa03be0f06788e1d"
+dependencies = [
+ "egui",
+ "log",
+ "once_cell",
+ "regex",
 ]
 
 [[package]]

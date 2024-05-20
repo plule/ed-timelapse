@@ -21,6 +21,8 @@ pub struct TemplateApp {
     screenshoter: crate::screenshot::Watcher,
 
     timelapse_folder: PathBuf,
+
+    high_res: bool,
 }
 
 impl Default for TemplateApp {
@@ -38,6 +40,7 @@ impl Default for TemplateApp {
             value: 2.7,
             screenshoter: crate::screenshot::Watcher::try_new().unwrap(),
             timelapse_folder,
+            high_res: true,
         }
     }
 }
@@ -102,14 +105,21 @@ impl eframe::App for TemplateApp {
                 self.value += 1.0;
             }
 
+            ui.checkbox(&mut self.high_res, "High Resolution");
+
             if ui.button("Screenshot").clicked() {
                 // This is where you would call your own code to take a screenshot.
                 // Here we just print a message to the console:
-                let screenshot = self.screenshoter.take_screenshot(true).unwrap();
+                let screenshot = self.screenshoter.take_screenshot(self.high_res).unwrap();
+                log::info!("Took screenshot: {:?}", screenshot);
                 dbg!(store_screenshot(screenshot, true, &self.timelapse_folder).unwrap());
             }
 
             ui.separator();
+
+            ui.collapsing("Logs", |ui| {
+                egui_logger::logger_ui(ui);
+            });
 
             if let Some(error) = &self.last_error {
                 ui.colored_label(egui::Color32::RED, error);
@@ -147,13 +157,15 @@ fn store_screenshot(
     remove_original: bool,
     folder: &Path,
 ) -> Result<PathBuf> {
+    let now = chrono::Local::now();
     let folder = folder.join(format!(
         "{} {}",
-        chrono::Local::now().format("%Y-%m-%d"),
+        now.format("%Y-%m-%d"),
         screenshot.location,
     ));
     std::fs::create_dir_all(&folder)?;
-    let destination = folder.join(screenshot.path.file_name().unwrap());
+    let filename = now.format("%H-%M-%S.bmp").to_string();
+    let destination = folder.join(filename);
     std::fs::copy(&screenshot.path, &destination)?;
 
     if remove_original {
