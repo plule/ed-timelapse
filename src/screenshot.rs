@@ -1,7 +1,13 @@
-use std::{path::PathBuf, sync::mpsc::Receiver, time::Duration};
+use std::{
+    path::PathBuf,
+    sync::mpsc::{Receiver, Sender},
+    time::Duration,
+};
 
 use anyhow::{bail, Context, Result};
 use ed_journals::journal_event_content::screenshot_event::ScreenshotEvent;
+
+use self::watch::Exit;
 
 mod request;
 mod watch;
@@ -14,13 +20,13 @@ pub struct Screenshot {
 
 pub struct Watcher {
     rx: Receiver<ScreenshotEvent>,
+    exit_tx: Sender<watch::Exit>,
 }
 
 impl Watcher {
     pub fn try_new() -> Result<Self> {
-        Ok(Self {
-            rx: watch::watch_screenshots()?,
-        })
+        let (rx, exit_tx) = watch::watch_screenshots()?;
+        Ok(Self { rx, exit_tx })
     }
 
     pub fn take_screenshot(&mut self, high_res: bool) -> Result<Screenshot> {
@@ -34,6 +40,14 @@ impl Watcher {
         let screenshot = self.rx.recv_timeout(Duration::from_secs(10))?;
 
         screenshot.try_into()
+    }
+}
+
+impl Drop for Watcher {
+    fn drop(&mut self) {
+        if let Err(e) = self.exit_tx.send(Exit) {
+            log::error!("Failed to send exit signal to screenshot watcher: {}", e);
+        }
     }
 }
 

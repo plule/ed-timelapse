@@ -2,4 +2,5 @@
 
 mod app;
 pub mod screenshot;
+pub mod timelapse;
 pub use app::TemplateApp;

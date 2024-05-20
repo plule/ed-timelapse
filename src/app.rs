@@ -1,28 +1,29 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
-use anyhow::Result;
+use egui::{ProgressBar, Slider, SliderOrientation};
 
-use crate::screenshot::Screenshot;
+use crate::timelapse::{self, TimelapseControl};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)]
-    last_error: Option<String>,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
-
     #[serde(skip)]
     screenshoter: crate::screenshot::Watcher,
 
+    #[serde(skip)]
+    current_timelapse: Option<TimelapseControl>,
+
     timelapse_folder: PathBuf,
 
+    duration_seconds: u64,
+
     high_res: bool,
+
+    remove_original: bool,
 }
 
 impl Default for TemplateApp {
@@ -34,13 +35,12 @@ impl Default for TemplateApp {
             .to_owned()
             .join("Elite Dangerous Timelapses");
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            last_error: None,
-            value: 2.7,
             screenshoter: crate::screenshot::Watcher::try_new().unwrap(),
+            duration_seconds: 5,
             timelapse_folder,
             high_res: true,
+            remove_original: true,
+            current_timelapse: None,
         }
     }
 }
@@ -67,52 +67,93 @@ impl eframe::App for TemplateApp {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
+        // repaint always, to account for external threads update
+        ctx.request_repaint();
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
             egui::menu::bar(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
+                ui.menu_button("File", |ui| {
+                    if ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+                ui.add_space(16.0);
 
                 egui::widgets::global_dark_light_mode_buttons(ui);
             });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
+            ui.heading("Elite Dangerous Timelapse");
 
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
+            if let Some(current_timelapse) = &mut self.current_timelapse {
+                current_timelapse.update_status();
+                match current_timelapse.status {
+                    timelapse::Status::Capturing => {
+                        ui.label("Capturing...");
+                        ui.spinner();
+                    }
+                    timelapse::Status::Waiting(next) => {
+                        ui.label(format!(
+                            "Next in {}s",
+                            1 + (next - Instant::now()).as_secs()
+                        ));
+                        ui.add(ProgressBar::new(
+                            (next - Instant::now()).as_secs_f32() / self.duration_seconds as f32,
+                        ));
+                    }
+                }
+                if ui.button("Stop Timelapse").clicked() {
+                    current_timelapse.stop();
+                    self.current_timelapse = None;
+                }
+            } else {
+                ui.add(
+                    Slider::new(&mut self.duration_seconds, 1..=3600)
+                        .logarithmic(true)
+                        .clamp_to_range(true)
+                        .smart_aim(true)
+                        .orientation(SliderOrientation::Horizontal)
+                        .trailing_fill(true)
+                        .custom_formatter(|x, _| {
+                            let x = x as u64;
+                            if x < 60 {
+                                format!("{}s", x)
+                            } else {
+                                format!("{}m{}s", x / 60, x % 60)
+                            }
+                        }),
+                );
+                ui.checkbox(&mut self.high_res, "High Resolution");
+                ui.checkbox(&mut self.remove_original, "Remove Original");
+                if ui.button("Start Timelapse").clicked() {
+                    self.current_timelapse = match TimelapseControl::start(
+                        self.timelapse_folder.clone(),
+                        Duration::from_secs(self.duration_seconds),
+                        self.high_res,
+                        true,
+                    ) {
+                        Ok(timelapse) => Some(timelapse),
+                        Err(e) => {
+                            log::error!("Failed to start timelapse: {}", e);
+                            None
+                        }
+                    };
+                }
 
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
-            ui.checkbox(&mut self.high_res, "High Resolution");
-
-            if ui.button("Screenshot").clicked() {
-                // This is where you would call your own code to take a screenshot.
-                // Here we just print a message to the console:
-                let screenshot = self.screenshoter.take_screenshot(self.high_res).unwrap();
-                log::info!("Took screenshot: {:?}", screenshot);
-                dbg!(store_screenshot(screenshot, true, &self.timelapse_folder).unwrap());
+                if ui.button("Screenshot").clicked() {
+                    if let Err(e) = timelapse::take_screenshot(
+                        &mut self.screenshoter,
+                        self.high_res,
+                        self.remove_original,
+                        &self.timelapse_folder,
+                    ) {
+                        log::error!("Failed to take screenshot: {}", e);
+                    }
+                }
             }
 
             ui.separator();
@@ -120,10 +161,6 @@ impl eframe::App for TemplateApp {
             ui.collapsing("Logs", |ui| {
                 egui_logger::logger_ui(ui);
             });
-
-            if let Some(error) = &self.last_error {
-                ui.colored_label(egui::Color32::RED, error);
-            }
 
             ui.add(egui::github_link_file!(
                 "https://github.com/emilk/eframe_template/blob/main/",
@@ -150,27 +187,4 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
-}
-
-fn store_screenshot(
-    screenshot: Screenshot,
-    remove_original: bool,
-    folder: &Path,
-) -> Result<PathBuf> {
-    let now = chrono::Local::now();
-    let folder = folder.join(format!(
-        "{} {}",
-        now.format("%Y-%m-%d"),
-        screenshot.location,
-    ));
-    std::fs::create_dir_all(&folder)?;
-    let filename = now.format("%H-%M-%S.bmp").to_string();
-    let destination = folder.join(filename);
-    std::fs::copy(&screenshot.path, &destination)?;
-
-    if remove_original {
-        std::fs::remove_file(screenshot.path)?;
-    }
-
-    Ok(destination)
 }
