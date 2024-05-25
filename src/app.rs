@@ -128,6 +128,9 @@ impl eframe::App for TemplateApp {
                         }),
                 );
                 ui.checkbox(&mut self.high_res, "High Resolution");
+                if self.high_res {
+                    ui.label("Only works in solo mode!");
+                }
                 ui.checkbox(&mut self.remove_original, "Remove Original");
                 if ui.button("Start Timelapse").clicked() {
                     self.current_timelapse = match TimelapseControl::start(
@@ -153,6 +156,12 @@ impl eframe::App for TemplateApp {
                     ) {
                         log::error!("Failed to take screenshot: {}", e);
                     }
+                }
+            }
+
+            if ui.button("Open Timelapse Folder").clicked() {
+                if let Err(e) = open::that(&self.timelapse_folder) {
+                    log::error!("Failed to open timelapse folder: {}", e);
                 }
             }
 
