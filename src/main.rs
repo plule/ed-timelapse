@@ -15,7 +15,7 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
     eframe::run_native(
-        "eframe template",
+        "ED Timelapse",
         native_options,
         Box::new(|cc| Box::new(ed_timelapse::TemplateApp::new(cc))),
     )
