@@ -33,6 +33,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
       - uses: actions-rs/cargo@v1
         with:
@@ -50,6 +51,7 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt
+      - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -118,4 +120,4 @@ jobs:
         files: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         draft: true
         body: |-
-          # ED-Timelapse ${{ github.ref_name }}☼
+          # ED-Timelapse ${{ github.ref_name }}
