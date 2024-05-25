@@ -108,3 +108,14 @@ jobs:
       with:
         name: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         path: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      if: startsWith(github.ref, 'refs/tags/v')
+      with:
+        files: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        draft: true
+        body: |-
+          # ED-Timelapse ${{ github.ref_name }}☼
