@@ -66,6 +66,7 @@ jobs:
           toolchain: stable
           override: true
           components: clippy
+      - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
@@ -92,6 +93,8 @@ jobs:
         target: ${{ matrix.TARGET }}
         override: true
 
+    - uses: Swatinem/rust-cache@v2
+
     - uses: actions-rs/cargo@v1
       with:
         use-cross: true
@@ -105,14 +108,3 @@ jobs:
       with:
         name: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         path: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-
-    - uses: svenstaro/upload-release-action@v2
-      name: Upload binaries to release
-      if: ${{ github.event_name == 'push' }}
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        asset_name: ed-timelapse-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        tag: ${{ github.ref }}
-        prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        overwrite: true
