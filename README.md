@@ -5,6 +5,8 @@ ED-Timelapse is a tool to help capturing timelapses in the video game Elite Dang
 It works by triggering an in-game screenshot, and then moves it in a folder dependent on the current
 date and the player's location in game. The file is also compressed.
 
+![demo](ed-timelapse.gif)
+
 ## Aknowledgment
 
 ED-Timelapse is made possible thanks to:
