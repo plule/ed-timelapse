@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{bail, Context, Result};
-use ed_journals::journal_event_content::screenshot_event::ScreenshotEvent;
+use ed_journals::logs::content::log_event_content::screenshot_event::ScreenshotEvent;
 
 use self::watch::Exit;
 
@@ -74,7 +74,10 @@ impl TryFrom<ScreenshotEvent> for Screenshot {
         if !path.is_file() {
             bail!("Screenshot file does not exist");
         }
-        let location = value.body.unwrap_or(value.system);
+        let location = value
+            .body
+            .or(value.system)
+            .unwrap_or_else(|| "Unknown location".to_string());
         Ok(Self { path, location })
     }
 }
