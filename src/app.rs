@@ -167,11 +167,9 @@ impl eframe::App for TemplateApp {
                 }
             }
 
-            if self.organize {
-                if ui.button("Open Timelapse Folder").clicked() {
-                    if let Err(e) = open::that(&self.timelapse_folder) {
-                        log::error!("Failed to open timelapse folder: {}", e);
-                    }
+            if self.organize && ui.button("Open Timelapse Folder").clicked() {
+                if let Err(e) = open::that(&self.timelapse_folder) {
+                    log::error!("Failed to open timelapse folder: {}", e);
                 }
             }
 
