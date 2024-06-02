@@ -23,6 +23,8 @@ pub struct TemplateApp {
 
     high_res: bool,
 
+    organize: bool,
+
     remove_original: bool,
 }
 
@@ -39,6 +41,7 @@ impl Default for TemplateApp {
             duration_seconds: 5,
             timelapse_folder,
             high_res: true,
+            organize: true,
             remove_original: true,
             current_timelapse: None,
         }
@@ -131,13 +134,17 @@ impl eframe::App for TemplateApp {
                 if self.high_res {
                     ui.label("Only works in solo mode!");
                 }
-                ui.checkbox(&mut self.remove_original, "Remove Original");
+                ui.checkbox(&mut self.organize, "Organize and convert the screenshots");
+                if self.organize {
+                    ui.checkbox(&mut self.remove_original, "Remove Original");
+                }
                 if ui.button("Start Timelapse").clicked() {
                     self.current_timelapse = match TimelapseControl::start(
                         self.timelapse_folder.clone(),
                         Duration::from_secs(self.duration_seconds),
                         self.high_res,
-                        true,
+                        self.organize,
+                        self.remove_original,
                     ) {
                         Ok(timelapse) => Some(timelapse),
                         Err(e) => {
@@ -151,6 +158,7 @@ impl eframe::App for TemplateApp {
                     if let Err(e) = timelapse::take_screenshot(
                         &mut self.screenshoter,
                         self.high_res,
+                        self.organize,
                         self.remove_original,
                         &self.timelapse_folder,
                     ) {
@@ -159,9 +167,11 @@ impl eframe::App for TemplateApp {
                 }
             }
 
-            if ui.button("Open Timelapse Folder").clicked() {
-                if let Err(e) = open::that(&self.timelapse_folder) {
-                    log::error!("Failed to open timelapse folder: {}", e);
+            if self.organize {
+                if ui.button("Open Timelapse Folder").clicked() {
+                    if let Err(e) = open::that(&self.timelapse_folder) {
+                        log::error!("Failed to open timelapse folder: {}", e);
+                    }
                 }
             }
 

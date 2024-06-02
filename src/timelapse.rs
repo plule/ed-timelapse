@@ -30,6 +30,7 @@ impl TimelapseControl {
         folder: PathBuf,
         interval: Duration,
         high_res: bool,
+        organize: bool,
         remove_original: bool,
     ) -> Result<Self> {
         let mut screenshot = crate::screenshot::Watcher::try_new()?;
@@ -43,7 +44,13 @@ impl TimelapseControl {
                 return;
             }
             status_tx.send(Status::Capturing).unwrap();
-            match take_screenshot(&mut screenshot, high_res, remove_original, &folder) {
+            match take_screenshot(
+                &mut screenshot,
+                high_res,
+                organize,
+                remove_original,
+                &folder,
+            ) {
                 Ok(s) => {
                     log::info!("Screenshot taken: {}", s.display());
                 }
@@ -84,12 +91,17 @@ impl TimelapseControl {
 pub fn take_screenshot(
     watcher: &mut Watcher,
     high_res: bool,
+    organize: bool,
     remove_original: bool,
     folder: &Path,
 ) -> Result<PathBuf> {
-    watcher
-        .take_screenshot(high_res)
-        .and_then(|s| store_screenshot(s, remove_original, folder))
+    watcher.take_screenshot(high_res).and_then(|s| {
+        if organize {
+            store_screenshot(s, remove_original, folder)
+        } else {
+            Ok(s.path)
+        }
+    })
 }
 
 fn store_screenshot(
