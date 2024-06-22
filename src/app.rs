@@ -17,9 +17,16 @@ pub struct TemplateApp {
     #[serde(skip)]
     current_timelapse: Option<TimelapseControl>,
 
+    #[serde(skip)]
+    stop_time: Option<Instant>,
+
     timelapse_folder: PathBuf,
 
-    duration_seconds: u64,
+    interval_seconds: u64,
+
+    stop_after: bool,
+
+    duration_minutes: u64,
 
     high_res: bool,
 
@@ -38,12 +45,15 @@ impl Default for TemplateApp {
             .join("Elite Dangerous Timelapses");
         Self {
             screenshoter: crate::screenshot::Watcher::try_new().unwrap(),
-            duration_seconds: 5,
+            interval_seconds: 5,
+            stop_after: false,
+            duration_minutes: 60,
             timelapse_folder,
             high_res: true,
             organize: true,
             remove_original: true,
             current_timelapse: None,
+            stop_time: None,
         }
     }
 }
@@ -105,17 +115,24 @@ impl eframe::App for TemplateApp {
                             1 + (next - Instant::now()).as_secs()
                         ));
                         ui.add(ProgressBar::new(
-                            (next - Instant::now()).as_secs_f32() / self.duration_seconds as f32,
+                            (next - Instant::now()).as_secs_f32() / self.interval_seconds as f32,
                         ));
                     }
                 }
                 if ui.button("Stop Timelapse").clicked() {
                     current_timelapse.stop();
                     self.current_timelapse = None;
+                } else if let Some(stop_time) = self.stop_time {
+                    let remaining = stop_time - Instant::now();
+                    ui.label(format!("Stopping in {}m", 1 + (remaining.as_secs() / 60)));
+                    if Instant::now() > stop_time {
+                        current_timelapse.stop();
+                        self.current_timelapse = None;
+                    }
                 }
             } else {
                 ui.add(
-                    Slider::new(&mut self.duration_seconds, 1..=3600)
+                    Slider::new(&mut self.interval_seconds, 1..=3600)
                         .logarithmic(true)
                         .clamp_to_range(true)
                         .smart_aim(true)
@@ -130,6 +147,29 @@ impl eframe::App for TemplateApp {
                             }
                         }),
                 );
+                ui.checkbox(&mut self.stop_after, "Stop after");
+                if self.stop_after {
+                    ui.add(
+                        Slider::new(&mut self.duration_minutes, 1..=1440)
+                            .logarithmic(true)
+                            .clamp_to_range(true)
+                            .smart_aim(true)
+                            .orientation(SliderOrientation::Horizontal)
+                            .trailing_fill(true)
+                            .custom_formatter(|x, _| {
+                                let x = x as u64;
+                                if x < 60 {
+                                    format!("{}m", x)
+                                } else {
+                                    format!("{}h{}m", x / 60, x % 60)
+                                }
+                            }),
+                    );
+                    ui.label(format!(
+                        "Number of screenshots: ~{}",
+                        60 * self.duration_minutes / self.interval_seconds
+                    ));
+                }
                 ui.checkbox(&mut self.high_res, "High Resolution");
                 if self.high_res {
                     ui.label("Only works in solo mode!");
@@ -141,7 +181,7 @@ impl eframe::App for TemplateApp {
                 if ui.button("Start Timelapse").clicked() {
                     self.current_timelapse = match TimelapseControl::start(
                         self.timelapse_folder.clone(),
-                        Duration::from_secs(self.duration_seconds),
+                        Duration::from_secs(self.interval_seconds),
                         self.high_res,
                         self.organize,
                         self.remove_original,
@@ -151,6 +191,11 @@ impl eframe::App for TemplateApp {
                             log::error!("Failed to start timelapse: {}", e);
                             None
                         }
+                    };
+                    self.stop_time = if self.stop_after {
+                        Some(Instant::now() + Duration::from_secs(60 * self.duration_minutes))
+                    } else {
+                        None
                     };
                 }
 

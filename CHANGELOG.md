@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [0.3.0] - 2024-06-22
+
+### Added
+
+- Ability to automatically stop the capture after some time
+
 ## [0.2.0] - 2024-06-01
 
 ### Changed
