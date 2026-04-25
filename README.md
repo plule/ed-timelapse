@@ -1,3 +1,5 @@
+**Archive notice**: Consider using something like EDDiscovery to automatically organize the screenshots, and AutoHotKey to send the events
+
 # ED Timelapse
 
 ED-Timelapse is a tool to help capturing timelapses in the video game Elite Dangerous.
